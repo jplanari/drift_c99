@@ -1,0 +1,15 @@
+# Format: PosX(px), PosY(px), VelX(m/s), VelY(m/s), damp(0/1), acc(0/1), fixedT(0/1), temp(K)
+# Note: 343 m/s = Mach 1
+
+# 1. Hypersonic Missile (Mach 5) moving East
+200, 50, 1715, 0, 0, 0, 0, 300
+
+# 2. Supersonic Fighter (Mach 2) intercept course
+200, 150, -1000, 1000, 0, 0, 0, 300
+
+# 3. Commercial Airliner (Mach 0.85 ~ 290 m/s)
+# Note: This will appear very slow/stationary compared to the satellite
+200, 250, 290, 0, 0, 0, 0, 300
+
+# 4. Stationary Heat Source (Factory/Power Plant)
+200, 350, 0, 0, 0, 0, 1, 1200
