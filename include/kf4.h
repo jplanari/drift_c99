@@ -2,11 +2,12 @@
  * kf4.h - Filtre de Kalman lineal de 4 estats (x, y, vx, vy) amb mesura de posició.
  *
  * Replica la semàntica de cv::KalmanFilter(4,2,0) usada a KalmanTracker.cpp:
- *   predict : statePre = F*statePost ; errPre = F*errPost*F' + Q   (retorna statePre)
+ *   predict : statePre = F*statePost ; errPre = F*errPost*F' + Q
+ *             i després statePost = statePre, errPost = errPre   (retorna statePre)
  *   correct : K = errPre*H'*(H*errPre*H' + R)^-1
  *             statePost = statePre + K*(z - H*statePre)
  *             errPost = (I - K*H)*errPre
- * Només statePost/errPost són l'estat "vigent": predict() no els modifica.
+ * Això fa que, sense correcció, un track avanci amb la seva velocitat (vegeu golden).
  *
  * F = [1 0 1 0; 0 1 0 1; 0 0 1 0; 0 0 0 1], H = [1 0 0 0; 0 1 0 0],
  * Q = 1e-2*I, R = 1e-1*I, errPost inicial = I (com createFilter original).

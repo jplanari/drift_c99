@@ -39,6 +39,7 @@ int hs_detect(const float *img, float thr, uint32_t min_area,
     for (seed = 0; seed < (uint32_t)N_PIX; seed++) {
         int sp;
         uint32_t count = 0;
+        uint32_t border = 0;
         double sum_x = 0.0;
         double sum_y = 0.0;
 
@@ -61,6 +62,13 @@ int hs_detect(const float *img, float thr, uint32_t min_area,
             sum_x += (double)x;
             sum_y += (double)y;
 
+            /* Píxel de frontera: algun veí 4-connectat fora de camp o no calent. */
+            if (x == 0 || x == DRIFT_IMG_W - 1 || y == 0 || y == DRIFT_IMG_H - 1 ||
+                !(img[idx - 1] > thr) || !(img[idx + 1] > thr) ||
+                !(img[idx - DRIFT_IMG_W] > thr) || !(img[idx + DRIFT_IMG_W] > thr)) {
+                border++;
+            }
+
             for (dy = -1; dy <= 1; dy++) {
                 for (dx = -1; dx <= 1; dx++) {
                     int nx = x + dx;
@@ -82,17 +90,23 @@ int hs_detect(const float *img, float thr, uint32_t min_area,
             }
         }
 
-        if (count < min_area) {
-            continue;
-        }
+        /* Àrea de contorn (Pick): A = N - B/2 - 1, amb A >= 0. */
+        {
+            double area = (double)count - 0.5 * (double)border - 1.0;
+            if (area < 0.0) area = 0.0;
 
-        if (n_out < max_out) {
-            out[n_out].x = (float)(sum_x / (double)count);
-            out[n_out].y = (float)(sum_y / (double)count);
-            out[n_out].area = count;
-            n_out++;
-        } else {
-            n_drop++;
+            if (area < (double)min_area) {
+                continue;
+            }
+
+            if (n_out < max_out) {
+                out[n_out].x = (float)(sum_x / (double)count);
+                out[n_out].y = (float)(sum_y / (double)count);
+                out[n_out].area = (float)area;
+                n_out++;
+            } else {
+                n_drop++;
+            }
         }
     }
 

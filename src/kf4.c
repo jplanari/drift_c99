@@ -56,6 +56,13 @@ void kf4_predict(kf4_t *kf, float out[2])
         kf->errPre[i][i] += KF_Q_DIAG;
     }
 
+    /* cv::KalmanFilter::predict() acaba amb statePost = statePre i errorCovPost = errorCovPre.
+     * Així, un track sense correcció avança amb la seva velocitat a cada frame. */
+    for (i = 0; i < 4; i++) {
+        kf->statePost[i] = kf->statePre[i];
+    }
+    drift_copy(kf->errPost, kf->errPre, sizeof(kf->errPre));
+
     out[0] = kf->statePre[0];
     out[1] = kf->statePre[1];
 }
