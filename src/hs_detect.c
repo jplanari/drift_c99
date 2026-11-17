@@ -3,8 +3,7 @@
  */
 #include "hs_detect.h"
 #include "drift_config.h"
-
-#include <string.h>
+#include "drift_util.h"
 
 #define N_PIX (DRIFT_IMG_W * DRIFT_IMG_H)
 
@@ -35,7 +34,7 @@ int hs_detect(const float *img, float thr, uint32_t min_area,
         return HS_ERR_ARG;
     }
 
-    memset(visited, 0, sizeof(visited));
+    drift_zero(visited, sizeof(visited));
 
     for (seed = 0; seed < (uint32_t)N_PIX; seed++) {
         int sp;
