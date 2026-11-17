@@ -81,25 +81,39 @@ static void test_detector(void)
     int dropped = 0;
     int n;
 
-    /* Blob 4x4 a (2..5, 2..5), temperatura 2000 sobre fons 250 (16 px >= min_area 10). */
+    /* Blob 5x5 a (2..6, 2..6), temperatura 2000 sobre fons 250.
+     * N = 25, frontera B = 16, àrea de contorn = 25 - 8 - 1 = 16. */
     clear_img(250.0f);
     {
         int y, x;
-        for (y = 2; y <= 5; y++)
-            for (x = 2; x <= 5; x++)
+        for (y = 2; y <= 6; y++)
+            for (x = 2; x <= 6; x++)
                 img[y][x] = 2000.0f;
     }
     n = hs_detect(&img[0][0], 1000.0f, 10, out, 8, &dropped);
-    CHECK(n == 1, "detector: un blob 4x4 dona una detecció");
-    CHECK(n == 1 && NEAR(out[0].x, 3.5f, 1e-5) && NEAR(out[0].y, 3.5f, 1e-5),
-          "detector: centroide del blob 4x4 és (3.5,3.5)");
-    CHECK(n == 1 && out[0].area == 16u, "detector: àrea del blob 4x4 és 16 píxels");
+    CHECK(n == 1, "detector: un blob 5x5 dona una detecció");
+    CHECK(n == 1 && NEAR(out[0].x, 4.0f, 1e-5) && NEAR(out[0].y, 4.0f, 1e-5),
+          "detector: centroide del blob 5x5 és (4,4)");
+    CHECK(n == 1 && NEAR(out[0].area, 16.0f, 1e-5), "detector: àrea de contorn del blob 5x5 és 16");
+
+    /* Disc de radi 2 (13 px): àrea de contorn 8 < 10, descartat (com OpenCV). */
+    clear_img(250.0f);
+    {
+        int y, x;
+        for (y = 0; y < 5; y++)
+            for (x = 0; x < 5; x++) {
+                int dx = x - 2, dy = y - 2;
+                if (dx * dx + dy * dy <= 4) img[50 + y][50 + x] = 2000.0f;
+            }
+    }
+    n = hs_detect(&img[0][0], 1000.0f, 10, out, 8, &dropped);
+    CHECK(n == 0, "detector: disc de 13 px (àrea de contorn 8) es descarta com a OpenCV");
 
     /* Dos píxels en diagonal: connectivitat 8 => un sol component. */
     clear_img(250.0f);
     img[10][10] = 2000.0f;
     img[11][11] = 2000.0f;
-    n = hs_detect(&img[0][0], 1000.0f, 1, out, 8, &dropped);
+    n = hs_detect(&img[0][0], 1000.0f, 0, out, 8, &dropped);
     CHECK(n == 1, "detector: píxels en diagonal formen un component (8-connectivitat)");
 
     /* Píxel aïllat de 1 px amb min_area = 10: descartat. */
@@ -118,7 +132,7 @@ static void test_detector(void)
     img[5][5] = 2000.0f;
     img[5][50] = 2000.0f;
     img[50][5] = 2000.0f;
-    n = hs_detect(&img[0][0], 1000.0f, 1, out, 2, &dropped);
+    n = hs_detect(&img[0][0], 1000.0f, 0, out, 2, &dropped);
     CHECK(n == 2 && dropped == 1, "detector: max_out limita sortida i compta dropped");
 }
 
@@ -169,19 +183,21 @@ static void test_kf_matches_closed_form(void)
 
 static void test_kf_coasting_semantics(void)
 {
-    /* Replica OpenCV: predict() no modifica statePost, per tant sense correct la
-     * predicció es repeteix idènticament. Aquest test documenta el comportament. */
+    /* Replica OpenCV: predict() copia statePre a statePost, així que sense correct
+     * el track avança amb la seva velocitat a cada frame. */
     kf4_t kf;
     float a[2], b[2], c[2];
+    float vx;
 
     kf4_init(&kf, 50.0f, 50.0f);
     kf4_predict(&kf, a);
     kf4_correct(&kf, 52.0f, 50.0f);
     kf4_predict(&kf, a);
+    vx = kf.statePost[2];
     kf4_predict(&kf, b);
     kf4_predict(&kf, c);
-    CHECK(NEAR(a[0], b[0], 1e-6) && NEAR(b[0], c[0], 1e-6),
-          "kf: sense correcció, predicció repetida (semàntica OpenCV)");
+    CHECK(NEAR(b[0] - a[0], vx, 1e-5) && NEAR(c[0] - b[0], vx, 1e-5),
+          "kf: sense correcció, el track avança amb la velocitat (semàntica OpenCV)");
 }
 
 static void test_tracker_lifecycle(void)

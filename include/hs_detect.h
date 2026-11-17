@@ -4,11 +4,15 @@
  * Substitueix: cv::threshold (THRESH_BINARY), convertTo(CV_8U), cv::findContours
  * (RETR_EXTERNAL), cv::contourArea, cv::moments i cv::minMaxLoc de detector.h.
  *
- * Diferències conegudes respecte OpenCV (a validar amb el golden master):
- *   - L'àrea és el recompte de píxels del component (inclou forats), no l'àrea
- *     poligonal del contorn extern.
- *   - El centroide és el de píxels, no el dels moments poligonals del contorn.
- *   - Connectivitat 8 (a verificar contra findContours).
+ * Àrea: per a un component sense forats, cv::contourArea del contorn extern
+ * (polígon per centres dels píxels de frontera) es calcula amb el teorema de
+ * Pick: A = I + B/2 - 1 = N - B/2 - 1, on N = píxels del component i B = píxels
+ * de frontera (amb almenys un veí 4-connectat fora del component o fora de camp).
+ * Els forats no es descompten (com a RETR_EXTERNAL, el forat compta dins l'àrea
+ * del contorn extern; aquí no s'afegeixen els píxels del forat: pendent).
+ * Centroide: de píxels (coincideix amb el de moments poligonals per a formes
+ * simètriques; pendent per a formes asimètriques).
+ * Connectivitat 8.
  */
 #ifndef HS_DETECT_H
 #define HS_DETECT_H
@@ -16,9 +20,9 @@
 #include <stdint.h>
 
 typedef struct {
-    float x;        /* centroide x, en píxels */
-    float y;        /* centroide y, en píxels */
-    uint32_t area;  /* nombre de píxels del component */
+    float x;        /* centroide x, en píxels (de píxels) */
+    float y;        /* centroide y, en píxels (de píxels) */
+    float area;     /* àrea equivalent a cv::contourArea del contorn extern */
 } hs_point;
 
 /* Codis d'error (negatius). */
