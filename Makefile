@@ -41,6 +41,15 @@ golden_check: test/golden_check.c $(SRC) $(LIBM)
 golden-check: golden_check
 	./golden_check $(GOLDEN_DIR)
 
+# Prova d'extrem a extrem: render IR sense soroll + detecció + tracking vs física.
+# Host-only; enllaça amb -lm (expf, round), no amb LibmCS.
+SCENARIO ?= golden/scenario_ref/ref_scenario.csv
+scenario_track_check: test/scenario_track_check.c $(SRC)
+	$(CC) $(CFLAGS) -o $@ test/scenario_track_check.c $(SRC) -lm
+
+scenario-track-check: scenario_track_check
+	./scenario_track_check $(SCENARIO)
+
 # Comprova que els objectes de src/ només necessiten símbols de libm.
 check-deps: $(SRC)
 	@fail=0; \
@@ -59,6 +68,6 @@ check-deps: $(SRC)
 	if [ $$fail -eq 0 ]; then echo "OK: només dependències de libm"; else exit 1; fi
 
 clean:
-	rm -f test_host golden_check
+	rm -f test_host golden_check scenario_track_check
 
-.PHONY: all test check-deps clean
+.PHONY: all test check-deps clean scenario-track-check
