@@ -32,6 +32,15 @@ test_host: test/test_host.c $(SRC) $(LIBM)
 test: test_host
 	./test_host
 
+# Comparador amb el golden master (cal generar-lo abans amb golden/golden_gen.cpp).
+# Ús: make golden-check GOLDEN_DIR=golden_out
+GOLDEN_DIR ?= golden_out
+golden_check: test/golden_check.c $(SRC) $(LIBM)
+	$(CC) $(CFLAGS) $(LIBMCS_INC) -o $@ test/golden_check.c $(SRC) $(LIBM)
+
+golden-check: golden_check
+	./golden_check $(GOLDEN_DIR)
+
 # Comprova que els objectes de src/ només necessiten símbols de libm.
 check-deps: $(SRC)
 	@fail=0; \
@@ -50,6 +59,6 @@ check-deps: $(SRC)
 	if [ $$fail -eq 0 ]; then echo "OK: només dependències de libm"; else exit 1; fi
 
 clean:
-	rm -f test_host
+	rm -f test_host golden_check
 
 .PHONY: all test check-deps clean
