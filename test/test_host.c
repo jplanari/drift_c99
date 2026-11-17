@@ -6,7 +6,9 @@
 #include <math.h>
 
 #include "drift_config.h"
+#include "drift_rng.h"
 #include "hs_detect.h"
+#include "hs_image.h"
 #include "kf4.h"
 #include "tracker.h"
 
@@ -18,6 +20,50 @@ static int n_fail = 0;
 } while (0)
 
 #define NEAR(a, b, tol) (fabs((double)(a) - (double)(b)) <= (tol))
+
+static void test_rng(void)
+{
+    drift_rng_t r;
+    double sum = 0.0, sum2 = 0.0;
+    int i, n = 200000;
+    int in_range = 1;
+
+    drift_rng_seed(&r, 12345u);
+    for (i = 0; i < n; i++) {
+        float z = drift_rng_randn(&r, 0.0f, 2.0f);
+        sum += z;
+        sum2 += (double)z * z;
+    }
+    {
+        double mean = sum / n;
+        double var = sum2 / n - mean * mean;
+        CHECK(fabs(mean) < 0.03, "rng: mitjana de randn(0,2) propera a 0");
+        CHECK(fabs(sqrt(var) - 2.0) < 0.03, "rng: desviació de randn(0,2) propera a 2");
+    }
+
+    drift_rng_seed(&r, 7u);
+    for (i = 0; i < 10000; i++) {
+        float u = drift_rng_uniform(&r);
+        if (!(u > 0.0f && u < 1.0f)) { in_range = 0; break; }
+    }
+    CHECK(in_range, "rng: uniforme estrictament dins (0,1)");
+}
+
+static void test_normalize(void)
+{
+    float src[4] = { 10.0f, 20.0f, 30.0f, 40.0f };
+    uint8_t dst[4];
+    int rc = hs_normalize_minmax_u8(src, dst, 4);
+    CHECK(rc == 0 && dst[0] == 0 && dst[3] == 255, "normalize: min->0, max->255");
+    CHECK(rc == 0 && dst[1] == 85 && dst[2] == 170, "normalize: valors intermedis lineals");
+
+    {
+        float flat[3] = { 5.0f, 5.0f, 5.0f };
+        uint8_t d3[3];
+        hs_normalize_minmax_u8(flat, d3, 3);
+        CHECK(d3[0] == 0 && d3[1] == 0 && d3[2] == 0, "normalize: imatge plana dona zeros");
+    }
+}
 
 static float img[DRIFT_IMG_H][DRIFT_IMG_W];
 
@@ -195,6 +241,8 @@ static void test_tracker_pool_full(void)
 
 int main(void)
 {
+    test_rng();
+    test_normalize();
     test_detector();
     test_window_max();
     test_kf_matches_closed_form();

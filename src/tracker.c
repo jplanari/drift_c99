@@ -2,12 +2,11 @@
  * tracker.c - Vegeu tracker.h. Ordre de passos idèntic a KalmanTracker::update.
  */
 #include "tracker.h"
-
-#include <string.h>
+#include "drift_util.h"
 
 void tracker_init(tracker_t *T, int w, int h)
 {
-    memset(T, 0, sizeof(*T));
+    drift_zero(T, sizeof(*T));
     T->w = w;
     T->h = h;
 }
@@ -40,12 +39,14 @@ int tracker_update(tracker_t *T, const hs_point *meas, int n_meas)
     uint8_t used_m[DRIFT_MAX_DETECTIONS];
     double max_dist;
     double max_d2;
-    int half_w = T->w / 2;   /* divisió entera, com a width/2 original */
-    int half_h = T->h / 2;
+    int half_w;   /* divisió entera, com a width/2 original */
+    int half_h;
 
     if (T == NULL || (n_meas > 0 && meas == NULL) || n_meas < 0 || n_meas > DRIFT_MAX_DETECTIONS) {
         return -1;
     }
+    half_w = T->w / 2;
+    half_h = T->h / 2;
 
     /* 1. PREDICT */
     n_before = T->n;
@@ -120,7 +121,7 @@ int tracker_update(tracker_t *T, const hs_point *meas, int n_meas)
                 t->hist_len++;
             }
             if (w != i) {
-                T->tr[w] = *t;
+                drift_copy(&T->tr[w], t, sizeof(track_t));
             }
             w++;
         }

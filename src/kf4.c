@@ -2,8 +2,8 @@
  * kf4.c - Vegeu kf4.h.
  */
 #include "kf4.h"
+#include "drift_util.h"
 
-#include <string.h>
 #include <math.h>
 
 #define KF_Q_DIAG 1e-2f
@@ -13,7 +13,7 @@ void kf4_init(kf4_t *kf, float x, float y)
 {
     int i, j;
 
-    memset(kf, 0, sizeof(*kf));
+    drift_zero(kf, sizeof(*kf));
     kf->statePre[0] = x;
     kf->statePre[1] = y;
     kf->statePost[0] = x;
@@ -120,7 +120,7 @@ int kf4_correct(kf4_t *kf, float zx, float zy)
             ep[i][j] = acc;
         }
     }
-    memcpy(kf->errPost, ep, sizeof(ep));
+    drift_copy(kf->errPost, ep, sizeof(ep));
 
     return 0;
 }
