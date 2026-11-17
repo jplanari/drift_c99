@@ -122,6 +122,7 @@ int main(int argc, char **argv)
     for (f = 0; f < NF; f++) {
         int i, n_ref = 0, n_ours, dropped = 0, k;
         static rdet_t frame_ref[MAX_OUT];
+        static rdet_t sorted_ref[MAX_OUT];
         int n_frame_ref = 0;
 
         /* Deteccions de referència d'aquest frame. */
@@ -147,15 +148,18 @@ int main(int argc, char **argv)
             fails++;
         } else if (n_ref > 0) {
             qsort(out, (size_t)n_ours, sizeof(hs_point), cmp_hs);
-            qsort(frame_ref, (size_t)n_ref, sizeof(rdet_t), cmp_rdet);
+            /* Ordenem una còpia: frame_ref ha de conservar l'ordre original,
+             * perquè l'assignació d'ids del tracker depèn de l'ordre de les deteccions. */
+            for (k = 0; k < n_ref; k++) sorted_ref[k] = frame_ref[k];
+            qsort(sorted_ref, (size_t)n_ref, sizeof(rdet_t), cmp_rdet);
             for (k = 0; k < n_ref; k++) {
-                double dx = fabs_d(out[k].x - frame_ref[k].x);
-                double dy = fabs_d(out[k].y - frame_ref[k].y);
+                double dx = fabs_d(out[k].x - sorted_ref[k].x);
+                double dy = fabs_d(out[k].y - sorted_ref[k].y);
                 double d = (dx > dy) ? dx : dy;
                 if (d > max_det) max_det = d;
                 if (d > tol_det) {
                     printf("frame %d det %d: port (%.4f,%.4f) ref (%.4f,%.4f)\n",
-                           f, k, out[k].x, out[k].y, frame_ref[k].x, frame_ref[k].y);
+                           f, k, out[k].x, out[k].y, sorted_ref[k].x, sorted_ref[k].y);
                     fails++;
                 }
             }
