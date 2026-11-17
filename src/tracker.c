@@ -30,6 +30,15 @@ static void register_track(tracker_t *T, float x, float y)
     kf4_init(&t->kf, x, y);
 }
 
+/* Diferència en un eix circular de mida `size`, en enters (distància "Pac-Man").
+ * Retorna la diferència amb el mòdul més curt, dins de [-size/2, size/2]. */
+static int wrap_delta_int(int d, int size, int half)
+{
+    if (d > half)       d -= size;
+    else if (d < -half) d += size;
+    return d;
+}
+
 int tracker_update(tracker_t *T, const hs_point *meas, int n_meas)
 {
     int i, m;
@@ -59,7 +68,7 @@ int tracker_update(tracker_t *T, const hs_point *meas, int n_meas)
     }
 
     /* 2. ASSOCIACIÓ greedy. Distància calculada amb coordenades truncades a int,
-     *    com periodicDist(cv::Point, cv::Point) original. */
+     *    en un eix circular (wrap-around, com la correcció del filtre). */
     max_dist = (double)(T->w > T->h ? T->w : T->h) * DRIFT_DIST_RATIO;
     max_d2 = max_dist * max_dist;
 
@@ -72,8 +81,8 @@ int tracker_update(tracker_t *T, const hs_point *meas, int n_meas)
         for (m = 0; m < n_meas; m++) {
             double dx, dy, d2;
             if (used_m[m]) continue;
-            dx = (double)(px - (int)meas[m].x);
-            dy = (double)(py - (int)meas[m].y);
+            dx = (double)wrap_delta_int(px - (int)meas[m].x, T->w, half_w);
+            dy = (double)wrap_delta_int(py - (int)meas[m].y, T->h, half_h);
             d2 = dx * dx + dy * dy;
             if (d2 < min_d2 && d2 < max_d2) {
                 min_d2 = d2;

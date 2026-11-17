@@ -1,0 +1,17 @@
+--- a/src/Utils.h
++++ b/src/Utils.h
+@@ -13,7 +13,13 @@
+ 
+ // Calculate distance considering the "Pac-Man" wrap-around
+ inline double periodicDist(cv::Point p1, cv::Point p2, int w, int h) {
+-    return std::sqrt(std::pow(p1.x - p2.x, 2) + std::pow(p1.y - p2.y, 2));
++    // Shortest distance on the wrapped sensor ("Pac-Man"): the axis difference is taken
++    // modulo the sensor size, so a hotspot crossing the edge keeps its track.
++    int dx = p1.x - p2.x;
++    int dy = p1.y - p2.y;
++    if (dx > w / 2) dx -= w; else if (dx < -w / 2) dx += w;
++    if (dy > h / 2) dy -= h; else if (dy < -h / 2) dy += h;
++    return std::sqrt(static_cast<double>(dx) * dx + static_cast<double>(dy) * dy);
+ }
+ 
+ // Generate a random stable color based on ID

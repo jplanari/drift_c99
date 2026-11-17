@@ -237,6 +237,40 @@ static void test_tracker_lifecycle(void)
     CHECK(T.n == 1 && T.tr[0].id > id0, "tracker: id nou creixent després de baixa");
 }
 
+static void test_tracker_wrap_association(void)
+{
+    /* Un hotspot que travessa x=0 (o x=640) ha de continuar el mateix track,
+     * no crear-ne un de nou (distància circular a l'associació). */
+    tracker_t T;
+    hs_point det;
+    int id0, i;
+
+    tracker_init(&T, 640, 480);
+    /* Es mou cap a l'esquerra a 1 px/frame, des de x=20 fins a sota de 0. */
+    det.x = 20.0f; det.y = 100.0f; det.area = 0.0f;
+    tracker_update(&T, &det, 1);
+    id0 = T.tr[0].id;
+    for (i = 0; i < 30; i++) {
+        det.x -= 1.0f;
+        if (det.x < 0.0f) det.x += 640.0f;   /* el sensor wrapa la posició mesurada */
+        tracker_update(&T, &det, 1);
+    }
+    CHECK(T.n == 1, "tracker wrap: un sol track en travessar la vora esquerra");
+    CHECK(T.n == 1 && T.tr[0].id == id0, "tracker wrap: el track conserva l'id");
+
+    /* Cap a la dreta: des de x=630 cap a 640 (wrap a 0). */
+    tracker_init(&T, 640, 480);
+    det.x = 630.0f; det.y = 200.0f; det.area = 0.0f;
+    tracker_update(&T, &det, 1);
+    id0 = T.tr[0].id;
+    for (i = 0; i < 30; i++) {
+        det.x += 1.0f;
+        if (det.x >= 640.0f) det.x -= 640.0f;
+        tracker_update(&T, &det, 1);
+    }
+    CHECK(T.n == 1 && T.tr[0].id == id0, "tracker wrap: el track conserva l'id en travessar la vora dreta");
+}
+
 static void test_tracker_pool_full(void)
 {
     tracker_t T;
@@ -264,6 +298,7 @@ int main(void)
     test_kf_matches_closed_form();
     test_kf_coasting_semantics();
     test_tracker_lifecycle();
+    test_tracker_wrap_association();
     test_tracker_pool_full();
 
     if (n_fail == 0) {
